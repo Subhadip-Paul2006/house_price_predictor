@@ -32,6 +32,8 @@ logger = logging.getLogger(__name__)
 
 SEED = 42
 
+# ── Model configuration settings ─────────────────────────────────────────
+# Kaunse algorithms support karne hain, unki standard library imports aur params define kiye hain
 ALGORITHMS = {
     "linear_regression": {
         "import": "from sklearn.linear_model import LinearRegression",
@@ -58,7 +60,7 @@ class ModelTrainer:
         self.model = self._build_model()
 
     def _build_model(self):
-        """Instantiate the regressor based on algorithm name."""
+        # Algorithm config name check karke class initialize kar rahe hain
         from sklearn.ensemble import RandomForestRegressor
         from sklearn.linear_model import LinearRegression
 
@@ -77,14 +79,14 @@ class ModelTrainer:
             )
 
     def train(self, X_train: np.ndarray, y_train: np.ndarray):
-        """Fit the model and return itself."""
+        # Training set par model train ho raha hai (fit)
         logger.info("Training %s on %d samples...", ALGORITHMS[self.algorithm]["display_name"], len(X_train))
         self.model.fit(X_train, y_train)
         logger.info("Training complete.")
         return self
 
     def cross_validate(self, X: np.ndarray, y: np.ndarray, k: int = 5) -> dict:
-        """Run k-fold cross-validation and return mean/std scores."""
+        # Check karne ke liye ki model overfitting toh nahi kar raha, cross-validation run karte hain
         from sklearn.model_selection import cross_val_score
 
         scores = cross_val_score(self.model, X, y, cv=k, scoring="r2")
@@ -101,7 +103,7 @@ class ModelTrainer:
 # Main pipeline
 # ========================================================================
 def run_pipeline(algorithm: str = "linear_regression") -> None:
-    """Execute the full train → evaluate → save pipeline."""
+    # Pura end-to-end model training pipe orchestrate ho raha hai
 
     # 1. Load data
     logger.info("=" * 60)
@@ -119,6 +121,7 @@ def run_pipeline(algorithm: str = "linear_regression") -> None:
     df = Preprocessor.engineer_features(df)
 
     # 4. Separate features and target
+    # Input aur output variables alag alag kar rahe hain
     feature_cols = NUMERIC_COLS + CATEGORICAL_COLS
     X = df[feature_cols]
     y = df["Price"]
@@ -143,6 +146,7 @@ def run_pipeline(algorithm: str = "linear_regression") -> None:
     cv_scores = trainer.cross_validate(X_train_enc, y_train)
 
     # 9. Evaluate on test set
+    # Test set se features dekar evaluate kar rahe hain model performance metrics
     logger.info("STEP 8 — Evaluating on test set")
     y_pred = trainer.model.predict(X_test_enc)
     metrics = Evaluator.report(y_test.values, y_pred)
@@ -154,6 +158,7 @@ def run_pipeline(algorithm: str = "linear_regression") -> None:
     metrics["timestamp"] = datetime.now().isoformat()
 
     # 10. Persist
+    # Model binary bundle and meta metrics file save kar rahe hain disk par
     logger.info("STEP 9 — Saving artifacts")
     artifact_dir = ArtifactStore.save(
         model=trainer.model,
@@ -179,16 +184,16 @@ def run_pipeline(algorithm: str = "linear_regression") -> None:
 
 
 def train_all_models() -> None:
-    """Train both Linear Regression and Random Forest, then compare."""
+    # Linear Regression aur Random Forest dono pipelines train karke evaluate comparisons dikhayega
     results = {}
 
     for algo_key in ALGORITHMS:
         run_pipeline(algorithm=algo_key)
-        # Load back metrics for comparison
+        # Compare karne ke liye model metrics file reload kar rahe hain
         _, _, metrics = ArtifactStore.load(algorithm_name=algo_key)
         results[ALGORITHMS[algo_key]["display_name"]] = metrics
 
-    # Comparison table
+    # Comparison output table print ho rahi hai console terminal me
     print("\n" + "=" * 60)
     print("MODEL COMPARISON")
     print("=" * 60)
@@ -199,6 +204,7 @@ def train_all_models() -> None:
 # CLI
 # ========================================================================
 def main() -> None:
+    # CLI commands support setup (taaki --model all ya --model random_forest pass kar sakein)
     parser = argparse.ArgumentParser(
         description="Train the House Price Prediction model."
     )

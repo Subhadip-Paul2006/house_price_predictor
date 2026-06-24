@@ -27,7 +27,8 @@ from fpdf import FPDF
 
 from model import ArtifactStore, Predictor
 
-# ── Page config ────────────────────────────────────────────────────────
+# ── Web App Page Settings ────────────────────────────────────────────────
+# Streamlit app ka title, tab icon aur layout wide kar rahe hain
 st.set_page_config(
     page_title="🏠 House Price Predictor",
     page_icon="🏠",
@@ -38,7 +39,7 @@ st.set_page_config(
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# ── Constants ───────────────────────────────────────────────────────────
+# ── Kuch basic lists/options ─────────────────────────────────────────────
 LOCATIONS = ["Downtown", "Urban", "Suburban", "Rural"]
 MODEL_OPTIONS = {
     "Linear Regression": "linear_regression",
@@ -230,11 +231,11 @@ st.markdown(
 
 
 # ========================================================================
-# Session state: cache loaded models
+# Cache mechanism (taaki baar baar model file load na karni pade)
 # ========================================================================
 @st.cache_resource
 def load_predictor(algorithm_key: str) -> Predictor:
-    """Load a Predictor (model + preprocessor) from artifacts."""
+    # Model aur preprocessor load karke ek Predictor class object banata hai
     model, preprocessor, metrics = ArtifactStore.load(algorithm_name=algorithm_key)
     residual_std = metrics.get("residual_std", 0.0)
     return Predictor(model=model, preprocessor=preprocessor, residual_std=residual_std)
@@ -242,7 +243,7 @@ def load_predictor(algorithm_key: str) -> Predictor:
 
 @st.cache_resource
 def load_metrics(algorithm_key: str) -> dict:
-    """Load metrics dict for an algorithm."""
+    # Model ke save kiye gaye evaluation metrics load karne ke liye
     _, _, metrics = ArtifactStore.load(algorithm_name=algorithm_key)
     return metrics
 
@@ -746,12 +747,12 @@ may vary depending on local market conditions.
 
 
 # ========================================================================
-# Main app
+# Main app flow
 # ========================================================================
 def main() -> None:
-    """Entry point for the Streamlit app."""
+    # Streamlit Page ka entry point yahan se shuru hota hai
 
-    # Header
+    # Main Heading aur description layout
     st.title("🏠 House Price Prediction App")
     st.markdown(
         "Estimate property prices instantly using Machine Learning. "
@@ -759,25 +760,26 @@ def main() -> None:
     )
     st.caption("Model: Linear Regression & Random Forest on Indian Real Estate Data")
 
-    # Sidebar inputs
+    # Sidebar inputs collect kar rahe hain
     algorithm_key, features = render_sidebar()
 
-    # Tab navigation
+    # Teen tabs create kiye hain options ke liye
     tab_predict, tab_compare, tab_charts = st.tabs(["🔮 Predict", "⚖️ Compare", "📊 Charts"])
 
-    # ── Predict Tab ──────────────────────────────────────────────────────
+    # ── Predict Tab Ka Code ──────────────────────────────────────────────
     with tab_predict:
         st.header("Price Estimate")
         st.markdown("Enter property details in the sidebar, then click **Predict**.")
 
         if st.button("🔮 Predict Price", type="primary", use_container_width=True):
             with st.spinner("Calculating..."):
+                # Model predict karne ki tayyari ho rahi hai
                 predictor = load_predictor(algorithm_key)
                 metrics = load_metrics(algorithm_key)
 
                 price, lo, hi = predictor.confidence(features)
 
-                # Store for PDF report
+                # Prediction report pdf generate karne ke liye state maintain kar rahe hain
                 st.session_state["last_prediction"] = {
                     "price": price,
                     "lo": lo,
@@ -797,16 +799,16 @@ def main() -> None:
         else:
             st.info("👆 Adjust the sidebar inputs and click **Predict** to get an estimate.")
 
-    # ── Compare Tab ──────────────────────────────────────────────────────
+    # ── Compare Tab Ka Code ──────────────────────────────────────────────
     with tab_compare:
         render_comparison()
 
-    # ── Charts Tab ───────────────────────────────────────────────────────
+    # ── Charts Tab Ka Code ───────────────────────────────────────────────
     with tab_charts:
         st.header("Data Visualization")
         render_charts(features)
 
-    # Footer
+    # Footer section
     st.divider()
     st.caption(
         "Built with ❤️ using Python, scikit-learn, and Streamlit | "
