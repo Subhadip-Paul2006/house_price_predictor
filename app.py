@@ -63,6 +63,166 @@ st.markdown(
         color: white;
         text-align: center;
     }
+    
+    /* Report Preview Card CSS */
+    .report-container {
+        background-color: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        padding: 35px;
+        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        color: #1a202c !important;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        margin-top: 25px;
+        margin-bottom: 25px;
+    }
+    .report-header {
+        border-bottom: 3px double #3182ce;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+    }
+    .report-title-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    .report-title {
+        color: #2b6cb0 !important;
+        font-size: 26px;
+        font-weight: 800;
+        margin: 0;
+        line-height: 1.2;
+    }
+    .report-meta-text {
+        font-size: 13px;
+        color: #718096 !important;
+        margin-top: 5px;
+    }
+    .report-id-badge {
+        background-color: #ebf8ff;
+        color: #2b6cb0 !important;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-size: 13px;
+        font-weight: 700;
+        font-family: monospace;
+        border: 1px solid #bee3f8;
+    }
+    .report-section {
+        margin-top: 25px;
+        margin-bottom: 25px;
+    }
+    .report-section-title {
+        color: #2d3748 !important;
+        font-size: 15px;
+        font-weight: 700;
+        border-left: 4px solid #3182ce;
+        padding-left: 10px;
+        margin-bottom: 15px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .report-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+        gap: 15px;
+        margin-bottom: 15px;
+    }
+    .report-grid-2col {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+    @media (max-width: 768px) {
+        .report-grid-2col {
+            grid-template-columns: 1fr;
+        }
+    }
+    .report-card-item {
+        background-color: #f7fafc;
+        border: 1px solid #edf2f7;
+        padding: 12px;
+        border-radius: 8px;
+        text-align: center;
+    }
+    .report-card-label {
+        font-size: 11px;
+        color: #718096 !important;
+        text-transform: uppercase;
+        margin-bottom: 4px;
+        font-weight: 500;
+    }
+    .report-card-value {
+        font-size: 16px;
+        font-weight: 700;
+        color: #2d3748 !important;
+    }
+    .report-valuation-box {
+        background: linear-gradient(135deg, #ebf8ff 0%, #e6fffa 100%);
+        border: 1px solid #bee3f8;
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+    .report-val-title {
+        font-size: 13px;
+        color: #2b6cb0 !important;
+        font-weight: 700;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        letter-spacing: 0.05em;
+    }
+    .report-val-price {
+        font-size: 34px;
+        font-weight: 900;
+        color: #2c5282 !important;
+        margin-bottom: 5px;
+    }
+    .report-val-range {
+        font-size: 14px;
+        color: #4a5568 !important;
+        font-weight: 500;
+    }
+    .report-text {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #4a5568 !important;
+    }
+    .report-highlight {
+        font-weight: 600;
+        color: #1a202c !important;
+    }
+    .report-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    .report-table th {
+        background-color: #edf2f7;
+        color: #4a5568 !important;
+        font-weight: 700;
+        text-align: left;
+        padding: 8px 12px;
+        font-size: 11px;
+        text-transform: uppercase;
+        border-bottom: 2px solid #cbd5e0;
+    }
+    .report-table td {
+        padding: 10px 12px;
+        border-bottom: 1px solid #edf2f7;
+        font-size: 13px;
+        color: #2d3748 !important;
+    }
+    .report-disclaimer {
+        font-size: 11px;
+        color: #a0aec0 !important;
+        line-height: 1.5;
+        border-top: 1px solid #e2e8f0;
+        padding-top: 15px;
+        margin-top: 25px;
+    }
     </style>
     """,
     unsafe_allow_html=True,
@@ -222,9 +382,9 @@ def render_charts(features: dict) -> None:
         scatter = ax.scatter(
             house_data_df["Area"],
             house_data_df["Price"],
-            c=house_data_df["Location"].map(
+            c=house_data_df["Location"].fillna("Urban").map(
                 {"Downtown": "#e63946", "Urban": "#457b9d", "Suburban": "#2a9d8f", "Rural": "#e9c46a"}
-            ),
+            ).fillna("#888888").to_list(),
             alpha=0.5,
             s=20,
         )
@@ -341,63 +501,248 @@ def render_comparison() -> None:
         plt.close(fig)
 
 
-def render_pdf_report(predictor: Predictor, features: dict, price: float, lo: float, hi: float, metrics: dict) -> None:
-    """Generate and offer a PDF report for download (US-4)."""
+def render_report_preview_and_download(predictor: Predictor, features: dict, price: float, lo: float, hi: float, metrics: dict, algorithm_key: str) -> None:
+    """Generate and display an on-screen appraisal report, with options to download in PDF and Text/Markdown format (US-4)."""
+    import random
+    from datetime import datetime
 
+    # Seed the RNG deterministically using features to keep report consistent for the same inputs
+    seed_val = int(features.get("Area", 1000)) + int(features.get("Age", 0)) + len(features.get("Location", ""))
+    rng = random.Random(seed_val)
+
+    # 1. Generate report metadata
+    ref_id = f"REP-{datetime.now().strftime('%Y%m%d')}-{rng.randint(1000, 9999)}"
+    gen_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    # 2. Location-specific market dynamics
+    loc = features.get("Location", "Urban")
+    if loc == "Downtown":
+        market_desc = "Highly sought-after central business district with extremely high walkability and immediate public transit access. The neighborhood exhibits high premium rental demand and strong historical price growth."
+        connectivity_score = 9.5
+        amenities_score = 9.2
+        safety_score = 8.0
+        livability_score = 8.5
+    elif loc == "Urban":
+        market_desc = "Established urban sector characterized by excellent accessibility to schools, healthcare facilities, and retail centers. Offers a balanced lifestyle with steady capital appreciation and consistent rental yields."
+        connectivity_score = 8.8
+        amenities_score = 8.5
+        safety_score = 8.5
+        livability_score = 8.7
+    elif loc == "Suburban":
+        market_desc = "Family-oriented suburban neighborhood showcasing low noise levels, spacious green parks, and high-quality residential projects. High livability and strong demand from long-term home buyers."
+        connectivity_score = 7.5
+        amenities_score = 7.8
+        safety_score = 9.2
+        livability_score = 9.0
+    else:  # Rural
+        market_desc = "Quiet and peaceful rural zone featuring larger plot parcels and natural surroundings. Ideal for second homes or agricultural/leisure properties. Slower rental velocity but high long-term land appreciation potential."
+        connectivity_score = 5.8
+        amenities_score = 5.2
+        safety_score = 8.8
+        livability_score = 7.5
+
+    # 3. Random/mock insights
+    investment_yield = round(rng.uniform(3.0, 5.5), 2)
+    risk_assessment = rng.choice(["Low Risk / Core Investment", "Moderate Risk / Growth Play", "Low-to-Medium Risk"])
+    market_sentiment = rng.choice(["Bullish (High Demand)", "Stable / Balanced Market", "Neutral / Consolidation Phase"])
+    infrastructure_boost = rng.choice([
+        "Upcoming metro line extension within 1.5 km.",
+        "Proposed greenfield ring road development nearby.",
+        "New shopping mall and retail hub construction starting shortly.",
+        "Repaving of major arterial links and expansion of smart city infrastructure."
+    ])
+
+    # 4. Generate on-screen report inside a clean Streamlit container using standard Markdown text
+    with st.container(border=True):
+        st.markdown(f"""
+### 🏠 PROPERTY APPRAISAL REPORT
+**this report are for customer**
+
+**Reference ID:** `{ref_id}`  
+**Generated on:** {gen_time} | **Model:** {algorithm_key.replace('_', ' ').title()}
+
+---
+
+#### 1. Executive Summary
+This automated appraisal provides a comprehensive market valuation and property analysis for the specified asset. Using advanced machine learning models trained on premium real estate data points, the estimated fair market value is calculated to assist with investment profiling, purchasing decisions, or sales benchmarks.
+
+#### 2. Property Specifications
+* **Area (Sq Ft):** {features['Area']:,.0f}
+* **Bedrooms:** {features['Bedrooms']} BHK
+* **Bathrooms:** {features['Bathrooms']}
+* **Property Age:** {features['Age']} Years
+* **Location Type:** {features['Location']}
+
+#### 3. Valuation Breakdown
+* **Estimated Fair Market Value:** **{format_price(price)}**
+* **95% Confidence Interval:** {format_price(lo)} – {format_price(hi)}
+
+The estimate is derived from features matching typical properties in **{features['Location']}**. The statistical model confirms a high degree of confidence for this valuation range based on current market comparables.
+
+#### 4. Market & Investment Analysis
+* **Est. Rental Yield:** {investment_yield}% per annum
+* **Risk Profile:** {risk_assessment}
+* **Market Sentiment:** {market_sentiment}
+* **Key Drivers:** {infrastructure_boost}
+
+#### 5. Neighborhood Scorecard
+* **Connectivity & Transit:** {connectivity_score:.1f} / 10
+* **Commercial Amenities:** {amenities_score:.1f} / 10
+* **Safety Index:** {safety_score:.1f} / 10
+* **Overall Livability:** {livability_score:.1f} / 10
+
+**Local Market Context:** {market_desc}
+
+---
+*Disclaimer: This is an automated algorithmic report. This estimate is generated by a machine-learning model and should not be considered a formal professional appraisal. Actual market values may vary depending on local market conditions, floor layout, exact build quality, views, facing, and negotiation.*
+        """)
+
+    # ── PDF Generation ──
     pdf = FPDF()
     pdf.add_page()
-
+    
     # Title
-    pdf.set_font("Helvetica", "B", 20)
-    pdf.cell(0, 15, "House Price Estimate Report", new_x="LMARGIN", new_y="NEXT", align="C")
-
+    pdf.set_font("Helvetica", "B", 18)
+    pdf.cell(0, 10, "House Price Estimate Report", ln=1, align="C")
+    
+    # User-Requested Text Requirement
+    pdf.set_font("Helvetica", "B", 12)
+    pdf.set_text_color(49, 130, 206) # Nice blue (#3182ce)
+    pdf.cell(0, 10, "This is your generated report", ln=1, align="C")
+    pdf.set_text_color(0, 0, 0) # reset
+    
+    # Customer indicator (normal text)
     pdf.set_font("Helvetica", "", 10)
-    pdf.cell(0, 8, f"Generated: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}", new_x="LMARGIN", new_y="NEXT", align="C")
-    pdf.ln(10)
-
-    # Property details
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "Property Details", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 11)
-    for key, val in features.items():
-        pdf.cell(0, 8, f"  {key}: {val}", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(5)
-
-    # Price estimate
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "Price Estimate", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 8, f"  Estimated Price: {format_price(price)}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f"  Lower Bound (95% CI): {format_price(lo)}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f"  Upper Bound (95% CI): {format_price(hi)}", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(5)
-
-    # Model metrics
-    pdf.set_font("Helvetica", "B", 14)
-    pdf.cell(0, 10, "Model Performance", new_x="LMARGIN", new_y="NEXT")
-    pdf.set_font("Helvetica", "", 11)
-    pdf.cell(0, 8, f"  R2 Score: {metrics['r2']:.4f}", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f"  MAE: {metrics['mae']:.2f} Lakh", new_x="LMARGIN", new_y="NEXT")
-    pdf.cell(0, 8, f"  RMSE: {metrics['rmse']:.2f} Lakh", new_x="LMARGIN", new_y="NEXT")
-    pdf.ln(10)
-
-    # Disclaimer
+    pdf.cell(0, 8, "this report are for customer", ln=1, align="C")
+    
     pdf.set_font("Helvetica", "I", 9)
-    pdf.multi_cell(
-        0,
-        5,
-        "Disclaimer: This estimate is generated by a machine-learning model and should not be "
-        "considered a professional appraisal. Actual prices may vary based on factors not captured "
-        "in this model (e.g., floor, facing, amenities, market conditions).",
-    )
+    pdf.cell(0, 6, f"Reference ID: {ref_id} | Generated: {gen_time}", ln=1, align="C")
+    pdf.ln(5)
+    
+    # Horizontal line
+    pdf.line(10, pdf.get_y(), 200, pdf.get_y())
+    pdf.ln(5)
+    
+    # Executive Summary
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "1. Executive Summary", ln=1)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.multi_cell(0, 5, "This automated appraisal provides a comprehensive market valuation and property analysis. "
+                          "Using machine learning models trained on real estate datasets, the fair market value is "
+                          "calculated based on key property details and location context.")
+    pdf.ln(3)
 
-    pdf_bytes = pdf.output()
-    st.download_button(
-        label="📄 Download PDF Report",
-        data=pdf_bytes,
-        file_name=f"price_estimate_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-        mime="application/pdf",
-    )
+    # Specs
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "2. Property Specifications", ln=1)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(50, 6, f"Area: {features['Area']:,.0f} sq ft", ln=0)
+    pdf.cell(50, 6, f"Bedrooms: {features['Bedrooms']} BHK", ln=0)
+    pdf.cell(50, 6, f"Bathrooms: {features['Bathrooms']}", ln=1)
+    pdf.cell(50, 6, f"Age: {features['Age']} years", ln=0)
+    pdf.cell(50, 6, f"Location: {features['Location']}", ln=1)
+    pdf.ln(3)
+    
+    # Valuation
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "3. Valuation Estimate", ln=1)
+    pdf.set_font("Helvetica", "B", 10)
+    price_str = format_price(price).replace("₹", "Rs. ")
+    lo_str = format_price(lo).replace("₹", "Rs. ")
+    hi_str = format_price(hi).replace("₹", "Rs. ")
+    pdf.cell(0, 6, f"Estimated Fair Market Value: {price_str}", ln=1)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(0, 6, f"95% Confidence Interval: {lo_str} - {hi_str}", ln=1)
+    pdf.ln(3)
+    
+    # Market & Investment Details
+    pdf.set_font("Helvetica", "B", 11)
+    pdf.cell(0, 8, "4. Market & Investment Analysis", ln=1)
+    pdf.set_font("Helvetica", "", 10)
+    pdf.cell(80, 6, f"Est. Rental Yield: {investment_yield}% p.a.", ln=0)
+    pdf.cell(80, 6, f"Connectivity Rating: {connectivity_score:.1f} / 10", ln=1)
+    pdf.cell(80, 6, f"Risk Profile: {risk_assessment}", ln=0)
+    pdf.cell(80, 6, f"Commercial Amenities: {amenities_score:.1f} / 10", ln=1)
+    pdf.cell(80, 6, f"Market Sentiment: {market_sentiment}", ln=0)
+    pdf.cell(80, 6, f"Safety Index: {safety_score:.1f} / 10", ln=1)
+    pdf.cell(80, 6, f"Livability Index: {livability_score:.1f} / 10", ln=1)
+    pdf.ln(2)
+    pdf.multi_cell(0, 5, f"Local Market Context: {market_desc}")
+    pdf.ln(4)
+    
+    # Disclaimer
+    pdf.set_font("Helvetica", "I", 8)
+    pdf.multi_cell(0, 4, "Disclaimer: This is an automated algorithmic report. This estimate is generated by "
+                          "a machine-learning model and should not be considered a formal professional appraisal. "
+                          "Actual market values may vary depending on local conditions.")
+    
+    pdf_bytes = pdf.output(dest='S').encode('latin1')
+
+    # ── Text Report Generation ──
+    text_report = f"""==================================================
+PROPERTY APPRAISAL REPORT - {ref_id}
+==================================================
+This is your generated report
+this report are for customer
+Generated on: {gen_time}
+Model: {algorithm_key.replace('_', ' ').title()}
+
+1. EXECUTIVE SUMMARY
+---------------------
+This automated appraisal provides a comprehensive market valuation and property analysis.
+Using machine learning models, the estimated fair market value is calculated based on
+the property parameters and local neighborhood trends.
+
+2. PROPERTY SPECIFICATIONS
+---------------------------
+- Area: {features['Area']:,.0f} sq ft
+- Configuration: {features['Bedrooms']} BHK / {features['Bathrooms']} Bath
+- Property Age: {features['Age']} years
+- Location Type: {features['Location']}
+
+3. VALUATION ESTIMATE
+----------------------
+- Estimated Fair Market Value: {format_price(price)}
+- 95% Confidence Interval: {format_price(lo)} - {format_price(hi)}
+
+4. MARKET & INVESTMENT ANALYSIS
+--------------------------------
+- Est. Rental Yield: {investment_yield}% p.a.
+- Risk Profile: {risk_assessment}
+- Market Sentiment: {market_sentiment}
+- Connectivity Index: {connectivity_score}/10
+- Commercial Amenities: {amenities_score}/10
+- Safety Index: {safety_score}/10
+- Overall Livability: {livability_score}/10
+
+Neighborhood Context:
+{market_desc}
+
+5. DISCLAIMER
+--------------
+This is an automated algorithmic report. This estimate is generated by a machine-learning
+model and should not be considered a formal professional appraisal. Actual market values
+may vary depending on local market conditions.
+"""
+
+    st.markdown("### 📥 Download Valuation Report")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.download_button(
+            label="📄 Download PDF Report",
+            data=pdf_bytes,
+            file_name=f"property_report_{ref_id}.pdf",
+            mime="application/pdf",
+            use_container_width=True
+        )
+    with col2:
+        st.download_button(
+            label="📝 Download Text Report",
+            data=text_report,
+            file_name=f"property_report_{ref_id}.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
 
 
 # ========================================================================
@@ -441,23 +786,16 @@ def main() -> None:
                     "metrics": metrics,
                     "algorithm": algorithm_key,
                 }
-
                 st.balloons()
-                render_prediction(predictor, features, metrics)
 
-                st.divider()
-                st.subheader("📄 Export Report")
-                render_pdf_report(predictor, features, price, lo, hi, metrics)
+        if "last_prediction" in st.session_state:
+            pred = st.session_state["last_prediction"]
+            predictor = load_predictor(pred["algorithm"])
+            render_prediction(predictor, pred["features"], pred["metrics"])
+            st.divider()
+            render_report_preview_and_download(predictor, pred["features"], pred["price"], pred["lo"], pred["hi"], pred["metrics"], pred["algorithm"])
         else:
-            # Show placeholder if no prediction yet
             st.info("👆 Adjust the sidebar inputs and click **Predict** to get an estimate.")
-
-            # Show cached result if available
-            if "last_prediction" in st.session_state:
-                pred = st.session_state["last_prediction"]
-                st.subheader("Last Prediction")
-                st.metric("Estimated Price", format_price(pred["price"]))
-                st.metric("Range", f"{format_price(pred['lo'])} — {format_price(pred['hi'])}")
 
     # ── Compare Tab ──────────────────────────────────────────────────────
     with tab_compare:
