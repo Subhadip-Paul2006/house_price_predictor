@@ -1,4 +1,3 @@
-<![CDATA[<div align="center">
 
 # 📘 Project Summary — Learning Guide
 
