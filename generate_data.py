@@ -15,11 +15,12 @@ import os
 import numpy as np
 import pandas as pd
 
+# SEED fix kar rahe taaki random numbers har baar same hi milein
 SEED = 42
 N_SAMPLES = 1000
 OUTPUT_PATH = os.path.join("data", "house_data.csv")
 
-# Location multipliers (Downtown is most expensive, Rural cheapest)
+# Location ke hisab se rates adjust karne ke liye multiplier set kiya hai (Downtown sabse mehanga, Rural sasta)
 LOCATION_MULTIPLIERS = {
     "Downtown": 2.0,
     "Urban": 1.6,
@@ -31,41 +32,42 @@ LOCATION_MULTIPLIERS = {
 def generate_dataset(n: int = N_SAMPLES, seed: int = SEED) -> pd.DataFrame:
     """Return a DataFrame with synthetic house-price data."""
 
+    # RNG setup kar rahe hain seed ke sath
     rng = np.random.default_rng(seed)
 
-    # --- Feature distributions ---
-    area = rng.integers(500, 5000, size=n)                    # sq ft
-    bedrooms = rng.integers(1, 7, size=n)                     # 1–6
-    bathrooms = rng.integers(1, 6, size=n)                     # 1–5
-    age = rng.integers(0, 51, size=n)                         # 0–50 years
+    # --- Feature values randomly generate kar rahe hain ---
+    area = rng.integers(500, 5000, size=n)                    # Square feet (area)
+    bedrooms = rng.integers(1, 7, size=n)                     # 1 se 6 BHK tak
+    bathrooms = rng.integers(1, 6, size=n)                     # 1 se 5 bathrooms
+    age = rng.integers(0, 51, size=n)                         # Ghar kitna purana hai (0-50 years)
     locations = rng.choice(
         list(LOCATION_MULTIPLIERS.keys()),
         size=n,
-        p=[0.15, 0.35, 0.35, 0.15],                           # distribution
+        p=[0.15, 0.35, 0.35, 0.15],                           # Kaunsi location kitni baar aani chahiye
     )
 
-    # --- Price formula (Lakhs ₹) ---
-    # Base price from area, with contributions from beds/baths/age
-    base_price_per_sqft = 0.035          # Lakhs per sq ft base rate
+    # --- Ek basic price formula set kar rahe hain (Lakhs me) ---
+    # Area, bedrooms, bathrooms ke hisab se price badhega, age ke hisab se depreciate hoga (kam hoga)
+    base_price_per_sqft = 0.035          
     price = (
         area * base_price_per_sqft
-        + bedrooms * 5.0                  # each bedroom adds ~5 L
-        + bathrooms * 3.0                 # each bathroom adds ~3 L
-        - age * 0.3                       # depreciation per year
+        + bedrooms * 5.0                  # Har ek bedroom ka +5 Lakh
+        + bathrooms * 3.0                 # Har ek bathroom ka +3 Lakh
+        - age * 0.3                       # Har saal 0.3 Lakh value kam hogi (purana hone ki wajah se)
     )
 
-    # Apply location multiplier
+    # Location multiplier apply kar rahe hain
     location_mult = [LOCATION_MULTIPLIERS[loc] for loc in locations]
     price = price * location_mult
 
-    # Add realistic noise (~10 %)
+    # Thoda real-world market noise add kar rahe hain (around 10% fluctuation)
     noise = rng.normal(1.0, 0.10, size=n)
     price = price * noise
 
-    # Floor prices at 5 Lakh (no free houses)
+    # Kuch bhi ho jaye, price 5 Lakh se kam nahi hona chahiye (free me toh koi ghar nahi dega)
     price = np.maximum(price, 5.0)
 
-    # Round to 2 decimal places
+    # Decimal values ko 2 places tak round kar rahe hain
     price = np.round(price, 2)
 
     df = pd.DataFrame({
@@ -77,8 +79,8 @@ def generate_dataset(n: int = N_SAMPLES, seed: int = SEED) -> pd.DataFrame:
         "Price": price,
     })
 
-    # --- Inject some missing values for preprocessing testing ---
-    # ~2 % of values in Area, ~1 % in Bedrooms, ~1.5 % in Location
+    # --- Jaanबूझkar kuch missing/NaN values daal rahe hain taaki preprocessor clean karna seekhe ---
+    # Area me 2%, Bedrooms me 1%, aur Location me 1.5% NaNs daal rahe hain
     n_area_nan = int(0.02 * n)
     n_beds_nan = int(0.01 * n)
     n_loc_nan = int(0.015 * n)
@@ -91,6 +93,7 @@ def generate_dataset(n: int = N_SAMPLES, seed: int = SEED) -> pd.DataFrame:
 
 
 def main() -> None:
+    # Target directory exist nahi karti toh pehle folder create karo
     os.makedirs(os.path.dirname(OUTPUT_PATH), exist_ok=True)
     df = generate_dataset()
     df.to_csv(OUTPUT_PATH, index=False)
