@@ -74,7 +74,7 @@ class ArtifactStore:
         algo_dir = os.path.join(MODEL_DIR, algorithm_name)
 
         if run_id is None:
-            # Pick the most recent run
+            # Pick the most recent complete run (containing model.joblib)
             if not os.path.isdir(algo_dir):
                 raise FileNotFoundError(
                     f"No artifacts found for '{algorithm_name}'. Run train.py first."
@@ -82,12 +82,13 @@ class ArtifactStore:
             run_dirs = sorted(
                 d for d in os.listdir(algo_dir)
                 if os.path.isdir(os.path.join(algo_dir, d))
+                and os.path.exists(os.path.join(algo_dir, d, "model.joblib"))
             )
             if not run_dirs:
                 raise FileNotFoundError(
-                    f"No run directories in '{algo_dir}'. Run train.py first."
+                    f"No valid run directories (containing model.joblib) in '{algo_dir}'. Run train.py first."
                 )
-            run_id = run_dirs[-1]  # latest by name (timestamp-sorted)
+            run_id = run_dirs[-1]  # latest valid run by name (timestamp-sorted)
 
         artifact_dir = os.path.join(algo_dir, run_id)
         bundle_path = os.path.join(artifact_dir, "model.joblib")
@@ -117,6 +118,7 @@ class ArtifactStore:
         run_dirs = sorted(
             d for d in os.listdir(algo_dir)
             if os.path.isdir(os.path.join(algo_dir, d))
+            and os.path.exists(os.path.join(algo_dir, d, "model.joblib"))
         )
         return run_dirs[-1] if run_dirs else "none"
 
