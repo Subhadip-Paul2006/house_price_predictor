@@ -12,6 +12,7 @@ import json
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 from typing import Any, Dict, Optional, Tuple
 
 import joblib
@@ -19,7 +20,16 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-MODEL_DIR = "models"
+# Bug Fix #20: Use absolute path for model directory
+MODEL_DIR = str(Path(__file__).resolve().parent / "models")
+
+# Feature columns expected during inference (must match preprocess.py)
+ALL_FEATURE_COLS = [
+    "Area", "Bedrooms", "Bathrooms", "Age",
+    "Lot Area", "Overall Quality", "Overall Condition",
+    "Garage Cars", "Garage Area", "Total Basement SF", "Fireplaces",
+    "Location", "Neighborhood", "House Style", "Central Air", "Kitchen Quality",
+]
 
 
 # ========================================================================
@@ -27,10 +37,6 @@ MODEL_DIR = "models"
 # ========================================================================
 class ArtifactStore:
     """Save, load, and version trained model artifacts."""
-
-    @staticmethod
-    def _ensure_dir(path: str) -> None:
-        os.makedirs(os.path.dirname(path), exist_ok=True)
 
     @staticmethod
     def save(
@@ -138,21 +144,21 @@ class Predictor:
         # Input parameters ko dataframe me daalkar transform karenge aur model se predict karayenge
         X = self._features_to_dataframe(features)
         X_encoded = self.preprocessor.transform(X)
-        price = float(self.model.predict(X_encoded)[0])
+        # Bug Fix #26: Clamp negative predictions to 0
+        price = float(np.maximum(self.model.predict(X_encoded)[0], 0.0))
         logger.info("Predicted price: %.2f L for %s", price, features)
         return price
 
     def confidence(self, features: Dict[str, Any]) -> Tuple[float, float, float]:
-        # Price estimate ke sath safe limits (Confidence interval) nikal rahe hain (+/- 1.96 * Residual standard deviation)
+        # Price estimate ke sath safe limits (Confidence interval) nikal rahe hain
         price = self.predict(features)
         margin = 1.96 * self.residual_std   # 95% Confidence Band
         return price, max(price - margin, 0.0), price + margin
 
     def _features_to_dataframe(self, features: Dict[str, Any]) -> "pd.DataFrame":
         # Streamlit input widgets ki raw dict values ko dataframe columns me format karne ke liye
+        # Bug Fix #13: Uses ALL_FEATURE_COLS (single source of truth) instead of hardcoded list
         import pandas as pd
 
-        row = {}
-        for col in ["Area", "Bedrooms", "Bathrooms", "Age", "Location"]:
-            row[col] = features.get(col, 0)
+        row = {col: features.get(col, 0) for col in ALL_FEATURE_COLS}
         return pd.DataFrame([row])
