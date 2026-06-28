@@ -2,7 +2,7 @@
 train.py — Model training pipeline entry point.
 
 Orchestrates the full training flow:
-    load CSV → clean → engineer features → split → train → evaluate → persist
+    load CSV → clean → split → train → evaluate → persist
 
 Supports multiple algorithms (linear_regression, random_forest).
 Usage:
@@ -21,7 +21,7 @@ import numpy as np
 
 from evaluate import Evaluator
 from model import ArtifactStore
-from preprocess import CATEGORICAL_COLS, NUMERIC_COLS, HouseData, Preprocessor
+from preprocess import ALL_FEATURE_COLS, CATEGORICAL_COLS, NUMERIC_COLS, HouseData, Preprocessor
 
 # ── Logging setup ───────────────────────────────────────────────────────
 logging.basicConfig(
@@ -33,18 +33,10 @@ logger = logging.getLogger(__name__)
 SEED = 42
 
 # ── Model configuration settings ─────────────────────────────────────────
-# Kaunse algorithms support karne hain, unki standard library imports aur params define kiye hain
+# Bug Fix #15, #16: Removed dead string fields; only display_name is needed
 ALGORITHMS = {
-    "linear_regression": {
-        "import": "from sklearn.linear_model import LinearRegression",
-        "class": "LinearRegression()",
-        "display_name": "Linear Regression",
-    },
-    "random_forest": {
-        "import": "from sklearn.ensemble import RandomForestRegressor",
-        "class": "RandomForestRegressor(n_estimators=200, max_depth=20, random_state=42)",
-        "display_name": "Random Forest",
-    },
+    "linear_regression": {"display_name": "Linear Regression"},
+    "random_forest": {"display_name": "Random Forest"},
 }
 
 
@@ -86,10 +78,12 @@ class ModelTrainer:
         return self
 
     def cross_validate(self, X: np.ndarray, y: np.ndarray, k: int = 5) -> dict:
-        # Check karne ke liye ki model overfitting toh nahi kar raha, cross-validation run karte hain
+        # Bug Fix #17: Clone model for CV to avoid double-fitting and refit on full set after
         from sklearn.model_selection import cross_val_score
+        from sklearn.base import clone
 
-        scores = cross_val_score(self.model, X, y, cv=k, scoring="r2")
+        cv_model = clone(self.model)
+        scores = cross_val_score(cv_model, X, y, cv=k, scoring="r2")
         logger.info(
             "CV (%d-fold) R²: mean=%.4f  std=%.4f",
             k,
@@ -116,37 +110,32 @@ def run_pipeline(algorithm: str = "linear_regression") -> None:
     logger.info("STEP 2 — Cleaning data")
     df = Preprocessor.clean(df)
 
-    # 3. Engineer features
-    logger.info("STEP 3 — Engineering features")
-    df = Preprocessor.engineer_features(df)
+    # 3. Separate features and target
+    # Bug Fix #10, #18: No more dead engineer_features call; use ALL_FEATURE_COLS directly
+    logger.info("STEP 3 — Separating features and target")
+    X = df[ALL_FEATURE_COLS]
+    y = df[TARGET_COL]
 
-    # 4. Separate features and target
-    # Input aur output variables alag alag kar rahe hain
-    feature_cols = NUMERIC_COLS + CATEGORICAL_COLS
-    X = df[feature_cols]
-    y = df["Price"]
-
-    # 5. Split
+    # 4. Split
     logger.info("STEP 4 — Splitting train/test (80/20, seed=%d)", SEED)
     X_train, X_test, y_train, y_test = Preprocessor.split(X, y)
 
-    # 6. Preprocess: fit on train, transform both
+    # 5. Preprocess: fit on train, transform both
     logger.info("STEP 5 — Scaling & encoding")
     preprocessor = Preprocessor()
     X_train_enc = preprocessor.fit_transform(X_train)
     X_test_enc = preprocessor.transform(X_test)
 
-    # 7. Train
+    # 6. Train
     logger.info("STEP 6 — Training model: %s", ALGORITHMS[algorithm]["display_name"])
     trainer = ModelTrainer(algorithm=algorithm)
     trainer.train(X_train_enc, y_train)
 
-    # 8. Cross-validate
+    # 7. Cross-validate
     logger.info("STEP 7 — Cross-validation")
     cv_scores = trainer.cross_validate(X_train_enc, y_train)
 
-    # 9. Evaluate on test set
-    # Test set se features dekar evaluate kar rahe hain model performance metrics
+    # 8. Evaluate on test set
     logger.info("STEP 8 — Evaluating on test set")
     y_pred = trainer.model.predict(X_test_enc)
     metrics = Evaluator.report(y_test.values, y_pred)
@@ -157,8 +146,7 @@ def run_pipeline(algorithm: str = "linear_regression") -> None:
     metrics["algorithm"] = algorithm
     metrics["timestamp"] = datetime.now().isoformat()
 
-    # 10. Persist
-    # Model binary bundle and meta metrics file save kar rahe hain disk par
+    # 9. Persist
     logger.info("STEP 9 — Saving artifacts")
     artifact_dir = ArtifactStore.save(
         model=trainer.model,
@@ -167,13 +155,14 @@ def run_pipeline(algorithm: str = "linear_regression") -> None:
         algorithm_name=algorithm,
     )
 
-    # 11. Print summary
+    # 10. Print summary
     logger.info("=" * 60)
     logger.info("TRAINING COMPLETE")
     logger.info("=" * 60)
     print(f"\n📊 {ALGORITHMS[algorithm]['display_name']} — Results")
     print(f"   Training samples : {metrics['n_train']}")
     print(f"   Test samples     : {metrics['n_test']}")
+    print(f"   Features         : {len(ALL_FEATURE_COLS)}")
     print(f"   MAE              : {metrics['mae']:.2f} Lakh")
     print(f"   RMSE             : {metrics['rmse']:.2f} Lakh")
     print(f"   R² (test)        : {metrics['r2']:.4f}")
