@@ -41,6 +41,29 @@ The **House Price Prediction App** is a beginner-friendly yet production-ready A
 
 ---
 
+## 🎬 Demo
+
+A quick visual tour of the Streamlit app. The interface is organized into three tabs — **🔮 Predict**, **⚖️ Compare**, and **📊 Charts** — with all property inputs living in the left sidebar.
+
+<table>
+  <tr>
+    <td align="center" style="border:1px solid #d0d7de; border-radius:8px; padding:14px; background:#f6f8fa;">
+      <img src="screenshots/screencapture-localhost-8501-2026-06-25-14_01_11.png" alt="Prediction dashboard" width="700"><br>
+      <sub><b>Fig 1 — Prediction Dashboard.</b> Enter property details (area, bedrooms, bathrooms, age, lot, garage, location, etc.) in the sidebar, then hit <b>Predict</b>. The app returns the estimated price with a <b>95% confidence band</b>, live model performance metrics (R², MAE, RMSE, CV), and a full on-screen <b>Property Appraisal Report</b> with neighbourhood livability scores and investment insights.</sub>
+    </td>
+  </tr>
+  <tr>
+    <td align="center" style="border:1px solid #d0d7de; border-radius:8px; padding:14px; background:#f6f8fa;">
+      <img src="screenshots/screencapture-localhost-8501-2026-06-25-14_02_17.png" alt="Analytics & comparison view" width="700"><br>
+      <sub><b>Fig 2 — Analytics & Comparison.</b> The <b>Compare</b> tab stacks two properties side-by-side to judge value-per-sq-ft, while the <b>Charts</b> tab plots <b>Price vs. Area</b> (with your predicted home highlighted) and a <b>Feature Importance</b> breakdown showing which attributes drive the model's estimate.</sub>
+    </td>
+  </tr>
+</table>
+
+> 🌐 Want to try it live? The deployed app is linked at the top of this README.
+
+---
+
 ## ⭐ Key Features
 
 | Tier | Features |
@@ -150,10 +173,10 @@ quadrantChart
     title Capability Map — Complexity vs. Business Value
     x-axis Low Complexity --> High Complexity
     y-axis Low Business Value --> High Business Value
-    quadrant-1 Top Priority (high value, low effort)
-    quadrant-2 Strategic (high value, high effort)
-    quadrant-3 Reconsider (low value, high effort)
-    quadrant-4 Quick Wins (low value, low effort)
+    quadrant-1 Strategic Bets
+    quadrant-2 Top Priority
+    quadrant-3 Optional
+    quadrant-4 Reconsider
     "Price Prediction (Linear)": [0.25, 0.85]
     "Streamlit UI": [0.20, 0.80]
     "Metrics & Charts": [0.30, 0.70]
@@ -177,10 +200,10 @@ quadrantChart
     title Feature Priority — Impact vs. Effort
     x-axis Low Impact --> High Impact
     y-axis Low Effort --> High Effort
-    quadrant-1 Do Next (high impact, easy)
-    quadrant-2 Schedule (high impact, hard)
-    quadrant-3 Backlog (low impact, easy)
-    quadrant-4 Avoid (low impact, hard)
+    quadrant-1 Schedule
+    quadrant-2 Avoid
+    quadrant-3 Backlog
+    quadrant-4 Do Next
     "Core prediction": [0.90, 0.30]
     "Clean UI": [0.80, 0.25]
     "Charts": [0.65, 0.30]
