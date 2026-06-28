@@ -17,6 +17,7 @@ from __future__ import annotations
 import io
 import logging
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Tuple
 
 import matplotlib.pyplot as plt
@@ -26,6 +27,10 @@ import streamlit as st
 from fpdf import FPDF
 
 from model import ArtifactStore, Predictor
+
+# Bug Fix #20: Absolute path to data directory — works from any CWD
+DATA_DIR = Path(__file__).resolve().parent / "data"
+DATA_CSV_PATH = str(DATA_DIR / "house_data.csv")
 
 # ── Web App Page Settings ────────────────────────────────────────────────
 # Streamlit app ka title, tab icon aur layout wide kar rahe hain
@@ -41,6 +46,18 @@ logger = logging.getLogger(__name__)
 
 # ── Kuch basic lists/options ─────────────────────────────────────────────
 LOCATIONS = ["Downtown", "Urban", "Suburban", "Rural"]
+NEIGHBORHOODS = [
+    "Meadow Village", "West Side", "Greens", "SW Ames", "Old Town",
+    "Veenker", "South Campus", "Central Business", "NW Ames", "East End",
+    "University Heights", "Cedar Rapids", "Oak Park", "Mitchell",
+    "Iowa State Area", "College View", "Sawyer", "Downtown Historic",
+    "North Ames", "Industrial District", "Edwards", "Bluestem",
+    "East Urban", "Brookside", "Somerset", "Northridge Heights",
+    "Stone Brook", "Clear Creek",
+]
+HOUSE_STYLES = ["1Story", "SLvl", "2Story", "1.5Unf", "SFoyer", "1.5Fin"]
+CENTRAL_AIR_OPTIONS = ["Yes", "No"]
+KITCHEN_QUALITY_OPTIONS = ["Po", "Fa", "TA", "Gd", "Ex"]
 MODEL_OPTIONS = {
     "Linear Regression": "linear_regression",
     "Random Forest": "random_forest",
@@ -268,6 +285,9 @@ def render_sidebar() -> Tuple[str, dict]:
     st.sidebar.divider()
     st.sidebar.header("🏠 Property Details")
 
+    # ── Basic Info Section ──
+    st.sidebar.subheader("📐 Basic Info")
+
     area = st.sidebar.slider(
         "Area (sq ft)",
         min_value=300,
@@ -302,11 +322,114 @@ def render_sidebar() -> Tuple[str, dict]:
         help="Age of the property in years",
     )
 
+    # ── Lot & Exterior Section ──
+    st.sidebar.subheader("🏞️ Lot & Exterior")
+
+    lot_area = st.sidebar.slider(
+        "Lot Area (sq ft)",
+        min_value=800,
+        max_value=45000,
+        value=9500,
+        step=500,
+        help="Total lot/plot area in square feet",
+    )
+
+    overall_quality = st.sidebar.slider(
+        "Overall Quality (1-10)",
+        min_value=1,
+        max_value=10,
+        value=5,
+        step=1,
+        help="Overall material and finish quality",
+    )
+
+    overall_condition = st.sidebar.slider(
+        "Overall Condition (1-10)",
+        min_value=1,
+        max_value=10,
+        value=5,
+        step=1,
+        help="Overall condition of the house",
+    )
+
+    # ── Garage & Basement Section ──
+    st.sidebar.subheader("🚗 Garage & Basement")
+
+    garage_cars = st.sidebar.number_input(
+        "Garage Cars",
+        min_value=0,
+        max_value=4,
+        value=1,
+        step=1,
+        help="Size of garage in car capacity",
+    )
+
+    garage_area = st.sidebar.slider(
+        "Garage Area (sq ft)",
+        min_value=0,
+        max_value=2000,
+        value=480,
+        step=20,
+        help="Size of garage in square feet",
+    )
+
+    total_basement_sf = st.sidebar.slider(
+        "Total Basement SF",
+        min_value=0,
+        max_value=2500,
+        value=800,
+        step=50,
+        help="Total square feet of basement area",
+    )
+
+    # ── Interior Section ──
+    st.sidebar.subheader("🔥 Interior")
+
+    fireplaces = st.sidebar.number_input(
+        "Fireplaces",
+        min_value=0,
+        max_value=4,
+        value=0,
+        step=1,
+        help="Number of fireplaces",
+    )
+
+    central_air = st.sidebar.selectbox(
+        "Central Air",
+        options=CENTRAL_AIR_OPTIONS,
+        index=0,
+        help="Central air conditioning",
+    )
+
+    kitchen_quality = st.sidebar.selectbox(
+        "Kitchen Quality",
+        options=KITCHEN_QUALITY_OPTIONS,
+        index=2,  # default TA
+        help="Kitchen quality (Po=Poor, Fa=Fair, TA=Typical, Gd=Good, Ex=Excellent)",
+    )
+
+    # ── Location Section ──
+    st.sidebar.subheader("📍 Location")
+
     location = st.sidebar.selectbox(
-        "Location",
+        "Location Type",
         options=LOCATIONS,
         index=1,
         help="Locality type",
+    )
+
+    neighborhood = st.sidebar.selectbox(
+        "Neighborhood",
+        options=NEIGHBORHOODS,
+        index=0,
+        help="Specific neighborhood name",
+    )
+
+    house_style = st.sidebar.selectbox(
+        "House Style",
+        options=HOUSE_STYLES,
+        index=0,
+        help="Style of dwelling",
     )
 
     features = {
@@ -314,7 +437,18 @@ def render_sidebar() -> Tuple[str, dict]:
         "Bedrooms": int(bedrooms),
         "Bathrooms": int(bathrooms),
         "Age": int(age),
+        "Lot Area": float(lot_area),
+        "Overall Quality": int(overall_quality),
+        "Overall Condition": int(overall_condition),
+        "Garage Cars": int(garage_cars),
+        "Garage Area": float(garage_area),
+        "Total Basement SF": float(total_basement_sf),
+        "Fireplaces": int(fireplaces),
         "Location": location,
+        "Neighborhood": neighborhood,
+        "House Style": house_style,
+        "Central Air": central_air,
+        "Kitchen Quality": kitchen_quality,
     }
 
     return algorithm_key, features
@@ -430,7 +564,12 @@ def render_charts(features: dict) -> None:
                     pred.preprocessor.column_transformer.get_feature_names_out()
                 )
             except Exception:
-                feature_names = ["Area", "Bedrooms", "Bathrooms", "Age", "Downtown", "Rural", "Suburban", "Urban"]
+                feature_names = [
+                    "Area", "Bedrooms", "Bathrooms", "Age",
+                    "Lot Area", "Overall Quality", "Overall Condition",
+                    "Garage Cars", "Garage Area", "Total Basement SF", "Fireplaces",
+                    "Downtown", "Rural", "Suburban", "Urban",
+                ]
 
             fig, ax = plt.subplots(figsize=(10, 5))
             bars = ax.barh(feature_names, importances, color="#667eea")
@@ -458,7 +597,18 @@ def render_comparison() -> None:
         a_beds = st.number_input("Bedrooms", 1, 10, 3, key="comp_a_beds")
         a_baths = st.number_input("Bathrooms", 1, 8, 2, key="comp_a_baths")
         a_age = st.slider("Age (years)", 0, 50, 5, key="comp_a_age")
-        a_loc = st.selectbox("Location", LOCATIONS, index=1, key="comp_a_loc")
+        a_lot_area = st.slider("Lot Area (sq ft)", 800, 45000, 9500, 500, key="comp_a_lot_area")
+        a_overall_quality = st.slider("Overall Quality", 1, 10, 5, key="comp_a_oq")
+        a_overall_condition = st.slider("Overall Condition", 1, 10, 5, key="comp_a_oc")
+        a_garage_cars = st.number_input("Garage Cars", 0, 4, 1, key="comp_a_gc")
+        a_garage_area = st.slider("Garage Area (sq ft)", 0, 2000, 480, 20, key="comp_a_ga")
+        a_basement = st.slider("Basement SF", 0, 2500, 800, 50, key="comp_a_bs")
+        a_fireplaces = st.number_input("Fireplaces", 0, 4, 0, key="comp_a_fp")
+        a_central_air = st.selectbox("Central Air", CENTRAL_AIR_OPTIONS, key="comp_a_ca")
+        a_kitchen_quality = st.selectbox("Kitchen Quality", KITCHEN_QUALITY_OPTIONS, key="comp_a_kq")
+        a_loc = st.selectbox("Location Type", LOCATIONS, index=1, key="comp_a_loc")
+        a_neighborhood = st.selectbox("Neighborhood", NEIGHBORHOODS, key="comp_a_neigh")
+        a_house_style = st.selectbox("House Style", HOUSE_STYLES, key="comp_a_hs")
 
     with col_b:
         st.subheader("Property B")
@@ -466,11 +616,38 @@ def render_comparison() -> None:
         b_beds = st.number_input("Bedrooms", 1, 10, 4, key="comp_b_beds")
         b_baths = st.number_input("Bathrooms", 1, 8, 3, key="comp_b_baths")
         b_age = st.slider("Age (years)", 0, 50, 2, key="comp_b_age")
-        b_loc = st.selectbox("Location", LOCATIONS, index=0, key="comp_b_loc")
+        b_lot_area = st.slider("Lot Area (sq ft)", 800, 45000, 12000, 500, key="comp_b_lot_area")
+        b_overall_quality = st.slider("Overall Quality", 1, 10, 6, key="comp_b_oq")
+        b_overall_condition = st.slider("Overall Condition", 1, 10, 6, key="comp_b_oc")
+        b_garage_cars = st.number_input("Garage Cars", 0, 4, 2, key="comp_b_gc")
+        b_garage_area = st.slider("Garage Area (sq ft)", 0, 2000, 600, 20, key="comp_b_ga")
+        b_basement = st.slider("Basement SF", 0, 2500, 1000, 50, key="comp_b_bs")
+        b_fireplaces = st.number_input("Fireplaces", 0, 4, 1, key="comp_b_fp")
+        b_central_air = st.selectbox("Central Air", CENTRAL_AIR_OPTIONS, key="comp_b_ca")
+        b_kitchen_quality = st.selectbox("Kitchen Quality", KITCHEN_QUALITY_OPTIONS, key="comp_b_kq")
+        b_loc = st.selectbox("Location Type", LOCATIONS, index=0, key="comp_b_loc")
+        b_neighborhood = st.selectbox("Neighborhood", NEIGHBORHOODS, key="comp_b_neigh")
+        b_house_style = st.selectbox("House Style", HOUSE_STYLES, key="comp_b_hs")
 
     if st.button("🔍 Compare Properties", type="primary"):
-        features_a = {"Area": float(a_area), "Bedrooms": int(a_beds), "Bathrooms": int(a_baths), "Age": int(a_age), "Location": a_loc}
-        features_b = {"Area": float(b_area), "Bedrooms": int(b_beds), "Bathrooms": int(b_baths), "Age": int(b_age), "Location": b_loc}
+        features_a = {
+            "Area": float(a_area), "Bedrooms": int(a_beds), "Bathrooms": int(a_baths),
+            "Age": int(a_age), "Lot Area": float(a_lot_area),
+            "Overall Quality": int(a_overall_quality), "Overall Condition": int(a_overall_condition),
+            "Garage Cars": int(a_garage_cars), "Garage Area": float(a_garage_area),
+            "Total Basement SF": float(a_basement), "Fireplaces": int(a_fireplaces),
+            "Central Air": a_central_air, "Kitchen Quality": a_kitchen_quality,
+            "Location": a_loc, "Neighborhood": a_neighborhood, "House Style": a_house_style,
+        }
+        features_b = {
+            "Area": float(b_area), "Bedrooms": int(b_beds), "Bathrooms": int(b_baths),
+            "Age": int(b_age), "Lot Area": float(b_lot_area),
+            "Overall Quality": int(b_overall_quality), "Overall Condition": int(b_overall_condition),
+            "Garage Cars": int(b_garage_cars), "Garage Area": float(b_garage_area),
+            "Total Basement SF": float(b_basement), "Fireplaces": int(b_fireplaces),
+            "Central Air": b_central_air, "Kitchen Quality": b_kitchen_quality,
+            "Location": b_loc, "Neighborhood": b_neighborhood, "House Style": b_house_style,
+        }
 
         predictor = load_predictor("random_forest")
         price_a = predictor.predict(features_a)
@@ -485,17 +662,20 @@ def render_comparison() -> None:
             st.json(features_b)
 
         # Comparison bar chart
-        fig, ax = plt.subplots(figsize=(8, 4))
-        categories = ["Price (L)", "Area (sq ft)", "Bedrooms", "Bathrooms"]
-        vals_a = [price_a, a_area, a_beds, a_baths]
-        vals_b = [price_b, b_area, b_beds, b_baths]
+        fig, ax = plt.subplots(figsize=(12, 5))
+        categories = ["Price (L)", "Area (sq ft)", "Lot Area", "Bedrooms", "Bathrooms",
+                       "Overall Quality", "Garage Cars", "Basement SF", "Fireplaces"]
+        vals_a = [price_a, a_area, a_lot_area, a_beds, a_baths,
+                   a_overall_quality, a_garage_cars, a_basement, a_fireplaces]
+        vals_b = [price_b, b_area, b_lot_area, b_beds, b_baths,
+                   b_overall_quality, b_garage_cars, b_basement, b_fireplaces]
 
         x = np.arange(len(categories))
         width = 0.35
         ax.bar(x - width / 2, vals_a, width, label="Property A", color="#667eea")
         ax.bar(x + width / 2, vals_b, width, label="Property B", color="#f5576c")
         ax.set_xticks(x)
-        ax.set_xticklabels(categories)
+        ax.set_xticklabels(categories, rotation=45, ha="right")
         ax.legend()
         ax.set_title("Property Comparison")
         st.pyplot(fig, use_container_width=True)
@@ -573,6 +753,17 @@ This automated appraisal provides a comprehensive market valuation and property 
 * **Bathrooms:** {features['Bathrooms']}
 * **Property Age:** {features['Age']} Years
 * **Location Type:** {features['Location']}
+* **Neighborhood:** {features['Neighborhood']}
+* **House Style:** {features['House Style']}
+* **Lot Area:** {features['Lot Area']:,.0f} sq ft
+* **Overall Quality:** {features['Overall Quality']} / 10
+* **Overall Condition:** {features['Overall Condition']} / 10
+* **Garage Cars:** {features['Garage Cars']}
+* **Garage Area:** {features['Garage Area']:,.0f} sq ft
+* **Total Basement SF:** {features['Total Basement SF']:,.0f} sq ft
+* **Fireplaces:** {features['Fireplaces']}
+* **Central Air:** {features['Central Air']}
+* **Kitchen Quality:** {features['Kitchen Quality']}
 
 #### 3. Valuation Breakdown
 * **Estimated Fair Market Value:** **{format_price(price)}**
@@ -641,7 +832,18 @@ The estimate is derived from features matching typical properties in **{features
     pdf.cell(50, 6, f"Bedrooms: {features['Bedrooms']} BHK", ln=0)
     pdf.cell(50, 6, f"Bathrooms: {features['Bathrooms']}", ln=1)
     pdf.cell(50, 6, f"Age: {features['Age']} years", ln=0)
-    pdf.cell(50, 6, f"Location: {features['Location']}", ln=1)
+    pdf.cell(50, 6, f"Location: {features['Location']}", ln=0)
+    pdf.cell(50, 6, f"Neighborhood: {features['Neighborhood']}", ln=1)
+    pdf.cell(50, 6, f"House Style: {features['House Style']}", ln=0)
+    pdf.cell(50, 6, f"Lot Area: {features['Lot Area']:,.0f} sq ft", ln=0)
+    pdf.cell(50, 6, f"Overall Quality: {features['Overall Quality']}/10", ln=1)
+    pdf.cell(50, 6, f"Overall Condition: {features['Overall Condition']}/10", ln=0)
+    pdf.cell(50, 6, f"Garage Cars: {features['Garage Cars']}", ln=0)
+    pdf.cell(50, 6, f"Garage Area: {features['Garage Area']:,.0f} sq ft", ln=1)
+    pdf.cell(50, 6, f"Basement SF: {features['Total Basement SF']:,.0f}", ln=0)
+    pdf.cell(50, 6, f"Fireplaces: {features['Fireplaces']}", ln=0)
+    pdf.cell(50, 6, f"Central Air: {features['Central Air']}", ln=1)
+    pdf.cell(50, 6, f"Kitchen Quality: {features['Kitchen Quality']}", ln=0)
     pdf.ln(3)
     
     # Valuation
@@ -700,6 +902,17 @@ the property parameters and local neighborhood trends.
 - Configuration: {features['Bedrooms']} BHK / {features['Bathrooms']} Bath
 - Property Age: {features['Age']} years
 - Location Type: {features['Location']}
+- Neighborhood: {features['Neighborhood']}
+- House Style: {features['House Style']}
+- Lot Area: {features['Lot Area']:,.0f} sq ft
+- Overall Quality: {features['Overall Quality']}/10
+- Overall Condition: {features['Overall Condition']}/10
+- Garage Cars: {features['Garage Cars']}
+- Garage Area: {features['Garage Area']:,.0f} sq ft
+- Total Basement SF: {features['Total Basement SF']:,.0f} sq ft
+- Fireplaces: {features['Fireplaces']}
+- Central Air: {features['Central Air']}
+- Kitchen Quality: {features['Kitchen Quality']}
 
 3. VALUATION ESTIMATE
 ----------------------
@@ -812,7 +1025,7 @@ def main() -> None:
     st.divider()
     st.caption(
         "Built with ❤️ using Python, scikit-learn, and Streamlit | "
-        "Model R² ≥ 0.89 | Data: 1000 Indian real-estate samples"
+        "Model R² ≥ 0.89 | Data: 1000 Indian real-estate samples (16 features)"
     )
 
 
