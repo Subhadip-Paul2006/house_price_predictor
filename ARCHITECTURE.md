@@ -4,6 +4,15 @@
 
 ---
 
+### 🗂️ Project Documentation
+
+| **Core Documents** | **Requirements & Design** | **Guides & Usage** |
+| :--- | :--- | :--- |
+| 🏠 [README.md](README.md) - Project Overview | 📋 [PRD.md](PRD.md) - Product Requirements | 📘 [GUIDE.md](GUIDE.md) - Complete Project Guide |
+| 🏛️ [ARCHITECTURE.md](ARCHITECTURE.md) - System Design | 🔧 [TRD.md](TRD.md) - Technical Requirements | 📖 [USAGE.md](USAGE.md) - Setup & Contribution |
+
+---
+
 ## 📑 Table of Contents
 
 1. [Design Principles](#-design-principles)
@@ -31,6 +40,9 @@
 | **Idempotent pipeline** | Re-running `train.py` from raw CSV yields the same model artifact. |
 | **Thin UI, fat model** | Streamlit is a presentation layer; all business logic is in `preprocess.py` / `model.py`. |
 | **Fail loud, fail early** | Invalid inputs raise typed exceptions surfaced as user-friendly Streamlit errors. |
+
+> [!NOTE]
+> These design principles enforce technical requirements and SLOs defined in [TRD.md](TRD.md) to realize product goals from [PRD.md](PRD.md).
 
 ---
 
@@ -76,6 +88,9 @@ flowchart TB
     class PRE,MODEL,METRICS logic;
     class CSV,ART data;
 ```
+
+> [!NOTE]
+> Detailed sequence diagrams illustrating dynamic runtime interaction between client, preprocessor, and predictor can be found in [TRD.md](TRD.md#-system-sequence-diagrams).
 
 ---
 
@@ -153,6 +168,9 @@ flowchart LR
     class Inputs,Result,Charts,Report web;
     class Ingest,Clean,Feat,Train,Eval,Persist pipe;
 ```
+
+> [!TIP]
+> Complete C4 Context, Container, and Component definitions are also mapped in [GUIDE.md](GUIDE.md#-c4-diagrams).
 
 ---
 
@@ -317,6 +335,9 @@ flowchart LR
 | Predictor        | `model.py`       | Wrap model + preprocess for inference |
 | StreamlitApp     | `app.py`         | Render inputs, results, charts, reports |
 
+> [!NOTE]
+> For a detailed walkthrough of each file's implementation logic and the 16 features within `house_data.csv`, check out [GUIDE.md](GUIDE.md#-what-every-file--folder-does).
+
 ---
 
 ## #️⃣ Design Decisions (ADR-style)
@@ -332,6 +353,9 @@ flowchart LR
 
 ### ADR-004 — Optional ZenML pipeline
 **Status:** Proposed · **Context:** Reproducibility & audit needs grow. **Decision:** Wrap training steps in ZenML pipelines; keep `train.py` as a thin entrypoint. **Consequences:** Slight onboarding cost, much better traceability.
+
+> [!TIP]
+> For a detailed discussion of machine learning theory (e.g., Linear Regression vs. Random Forest) and the reasoning behind these decisions, refer to [GUIDE.md](GUIDE.md#21-ml-theory--design-decisions--why-this-not-that).
 
 ---
 
