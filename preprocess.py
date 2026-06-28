@@ -9,6 +9,7 @@ Classes:
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Optional, Tuple
 
 import numpy as np
@@ -16,15 +17,28 @@ import pandas as pd
 from sklearn.compose import ColumnTransformer
 from sklearn.impute import SimpleImputer
 from sklearn.model_selection import train_test_split
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 logger = logging.getLogger(__name__)
 
 # ── Column groups ──────────────────────────────────────────────────────
 # Kaunse columns numeric hain, kaunse categorical hain, aur target kya hai, yahan define kiya hai
-NUMERIC_COLS = ["Area", "Bedrooms", "Bathrooms", "Age"]
-CATEGORICAL_COLS = ["Location"]
+# Updated for 16-feature CSV (17 columns total including Price target)
+NUMERIC_COLS = [
+    "Area", "Bedrooms", "Bathrooms", "Age",
+    "Lot Area", "Overall Quality", "Overall Condition",
+    "Garage Cars", "Garage Area", "Total Basement SF", "Fireplaces",
+]
+CATEGORICAL_COLS = ["Location", "Neighborhood", "House Style", "Central Air", "Kitchen Quality"]
 TARGET_COL = "Price"
+
+# Complete ordered list of all feature columns (used for DataFrame construction)
+ALL_FEATURE_COLS = NUMERIC_COLS + CATEGORICAL_COLS
+
+# Base path resolution — works regardless of current working directory
+BASE_DIR = Path(__file__).resolve().parent
+DATA_DIR = BASE_DIR / "data"
 
 
 # ========================================================================
@@ -33,8 +47,9 @@ TARGET_COL = "Price"
 class HouseData:
     """Load and inspect a house-price CSV dataset."""
 
-    def __init__(self, path: str = "data/house_data.csv") -> None:
-        self.path = path
+    def __init__(self, path: Optional[str] = None) -> None:
+        # Bug Fix #20: Use absolute path so it works from any CWD
+        self.path = str(path or (DATA_DIR / "house_data.csv"))
         self.df: Optional[pd.DataFrame] = None
 
     def load(self) -> pd.DataFrame:
@@ -60,7 +75,7 @@ class HouseData:
 # Preprocessor
 # ========================================================================
 class Preprocessor:
-    """Clean, engineer features, encode categoricals, scale numerics."""
+    """Clean, encode categoricals, scale numerics."""
 
     def __init__(self) -> None:
         self.scaler: Optional[StandardScaler] = None
@@ -104,27 +119,6 @@ class Preprocessor:
         return cleaned
 
     @staticmethod
-    def engineer_features(df: pd.DataFrame) -> pd.DataFrame:
-        """Add derived features to the DataFrame."""
-        df = df.copy()
-
-        # Area ke hisab se price per sqft check kar rahe hain (Sirf training data ke liye)
-        if TARGET_COL in df.columns and "Area" in df.columns:
-            df["Price_Per_SqFt"] = df[TARGET_COL] / df["Area"]
-
-        # Age ko buckets me split kiya taaki non-linear impact seekh sake model (New, Modern, etc)
-        if "Age" in df.columns:
-            bins = [0, 5, 10, 20, 50]
-            labels = ["New", "Modern", "Old", "Very_Old"]
-            df["Age_Bucket"] = pd.cut(df["Age"], bins=bins, labels=labels, include_lowest=True)
-
-        # Bedrooms vs Bathrooms ka ratio (Ghar kitna dynamic/spacious hai)
-        if "Bedrooms" in df.columns and "Bathrooms" in df.columns:
-            df["BedBath_Ratio"] = df["Bedrooms"] / df["Bathrooms"].replace(0, 1)
-
-        return df
-
-    @staticmethod
     def split(
         X: pd.DataFrame,
         y: pd.Series,
@@ -154,7 +148,6 @@ class Preprocessor:
         # sklearn ka standard ColumnTransformer pipeline set kar rahe hain
         # 1. Numeric -> Standard Scaler lagao
         # 2. Categorical -> One Hot Encoding lagao
-        from sklearn.pipeline import Pipeline
 
         self.column_transformer = ColumnTransformer(
             transformers=[
@@ -162,7 +155,7 @@ class Preprocessor:
                     "num",
                     Pipeline(
                         steps=[
-                            ("imputer", SimpleImputer(strategy="median")),  # Double safety
+                            ("imputer", SimpleImputer(strategy="median")),
                             ("scaler", StandardScaler()),
                         ]
                     ),
