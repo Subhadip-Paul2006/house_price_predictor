@@ -136,5 +136,4 @@ Thumbs.db
 # Personal notes (not for the repo)
 # ─────────────────────────────────────────────
 summary.md
-# test_dataset01/
-# test_dataset02/
+test_dataset02/train.csv
