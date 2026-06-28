@@ -794,7 +794,7 @@ The estimate is derived from features matching typical properties in **{features
     pdf.add_page()
     
     # Title
-    pdf.set_font("Helvetica", "B", 18)
+    pdf.set_font("Helvetica", "B", 22)
     pdf.cell(0, 10, "House Price Estimate Report", ln=1, align="C")
     
     # User-Requested Text Requirement
@@ -804,10 +804,10 @@ The estimate is derived from features matching typical properties in **{features
     pdf.set_text_color(0, 0, 0) # reset
     
     # Customer indicator (normal text)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("Helvetica", "", 16)
     pdf.cell(0, 8, "this report are for customer", ln=1, align="C")
     
-    pdf.set_font("Helvetica", "I", 9)
+    pdf.set_font("Helvetica", "I", 12)
     pdf.cell(0, 6, f"Reference ID: {ref_id} | Generated: {gen_time}", ln=1, align="C")
     pdf.ln(5)
     
@@ -816,18 +816,18 @@ The estimate is derived from features matching typical properties in **{features
     pdf.ln(5)
     
     # Executive Summary
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font("Helvetica", "B", 14)
     pdf.cell(0, 8, "1. Executive Summary", ln=1)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("Helvetica", "", 11)
     pdf.multi_cell(0, 5, "This automated appraisal provides a comprehensive market valuation and property analysis. "
                           "Using machine learning models trained on real estate datasets, the fair market value is "
                           "calculated based on key property details and location context.")
     pdf.ln(3)
 
     # Specs
-    pdf.set_font("Helvetica", "B", 11)
+    pdf.set_font("Helvetica", "B", 14)
     pdf.cell(0, 8, "2. Property Specifications", ln=1)
-    pdf.set_font("Helvetica", "", 10)
+    pdf.set_font("Helvetica", "", 11)
     pdf.cell(50, 6, f"Area: {features['Area']:,.0f} sq ft", ln=0)
     pdf.cell(50, 6, f"Bedrooms: {features['Bedrooms']} BHK", ln=0)
     pdf.cell(50, 6, f"Bathrooms: {features['Bathrooms']}", ln=1)
